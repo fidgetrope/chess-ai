@@ -1,0 +1,656 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #4a3d2e;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#scene-container {
+  position: absolute;
+  inset: 0;
+}
+
+#scene-container canvas {
+  display: block;
+  touch-action: none; /* let OrbitControls handle touch gestures itself */
+}
+
+/* Overlay UI sits above the canvas; only its interactive controls should
+   intercept pointer events so the board underneath stays clickable. */
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: #f2e9dc;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---- Top HUD strip ---- */
+#hud {
+  position: absolute;
+  inset: 0 0 auto 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+}
+
+#hud-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+#hud-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+#turn-indicator,
+#check-banner,
+#captured-tray,
+#hud-actions button {
+  background: #1d1610;
+  border: 1px solid #3a2a1c;
+  border-radius: 8px;
+  pointer-events: auto;
+}
+
+#turn-indicator {
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 6px 11px;
+}
+
+#check-banner {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ff6b5e;
+  border-color: #ff6b5e;
+  padding: 4px 10px;
+}
+
+#captured-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  padding: 5px 10px;
+  max-width: 62vw;
+}
+
+.cap-side {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cap-tag {
+  font-size: 0.7rem;
+  opacity: 0.55;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.captured-pieces {
+  font-size: 1.05rem;
+  line-height: 1;
+  letter-spacing: 1px;
+  word-break: break-all;
+}
+
+#hud-actions button {
+  font-size: 0.8rem;
+  padding: 6px 10px;
+}
+
+#hud-actions button:hover:not(:disabled) {
+  background: #2c211a;
+}
+
+#hud-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#menu-toggle {
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 5px 9px;
+}
+
+#hud-actions button[aria-expanded='true'] {
+  background: #3a2a1c;
+  border-color: #6b4a34;
+}
+
+/* Keep the HUD to a single row on phones: the turn pill gives way, the
+   action buttons stay together and just tighten up. */
+@media (max-width: 480px) {
+  #hud {
+    padding: 6px;
+    gap: 6px;
+  }
+  #hud-left {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  #turn-indicator {
+    font-size: 0.8rem;
+    padding: 5px 9px;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #hud-actions {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+  #hud-actions button {
+    font-size: 0.72rem;
+    padding: 5px 7px;
+  }
+  #menu-toggle {
+    font-size: 0.85rem;
+    padding: 5px 7px;
+  }
+}
+
+/* ---- Drop-down panels ---- */
+#menu-panel,
+#moves-panel,
+#coach-panel {
+  position: absolute;
+  top: 46px;
+  right: 8px;
+  z-index: 5;
+  background: #1d1610;
+  border: 1px solid #3a2a1c;
+  border-radius: 10px;
+  pointer-events: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+/* ---- Coach panel ---- */
+#coach-panel {
+  width: 230px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+#coach-advice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#coach-advice.coach-off {
+  opacity: 0.5;
+}
+
+#coach-advice.coach-off #coach-standing,
+#coach-advice.coach-off #coach-hint,
+#coach-advice.coach-off #coach-hint-btn {
+  display: none;
+}
+
+#coach-standing,
+#coach-threat,
+#coach-hint {
+  margin: 0;
+  line-height: 1.35;
+}
+
+#coach-standing {
+  color: #8fd0a0;
+}
+
+#coach-threat.coach-warn {
+  color: #ffcf6b;
+  font-weight: 600;
+}
+
+#coach-hint-btn {
+  font: inherit;
+  font-size: 0.82rem;
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #4a6b88;
+  background: #1b2732;
+  color: #cfe4f7;
+  cursor: pointer;
+}
+
+#coach-hint-btn:hover {
+  background: #24384a;
+}
+
+#coach-hint {
+  color: #d7e6f5;
+}
+
+#coach-hint strong {
+  color: #7fbcff;
+}
+
+#coach-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid #3a2a1c;
+}
+
+#coach-settings label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+/* ---- Rules helper note (why a move isn't allowed) ---- */
+#rules-note {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(92vw, 420px);
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #2a2016;
+  border: 1px solid #6b4a34;
+  color: #ffdca8;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  z-index: 5;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+}
+
+#rules-note.rules-note-idle {
+  opacity: 0;
+}
+
+/* ---- Blunder confirm dialog ---- */
+#blunder-dialog {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 7, 5, 0.65);
+  pointer-events: auto;
+  z-index: 6;
+}
+
+#blunder-dialog.hidden {
+  display: none;
+}
+
+#blunder-panel {
+  max-width: 320px;
+  background: #2b1f16;
+  border: 1px solid #6b4a34;
+  border-radius: 12px;
+  padding: 22px 26px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+#blunder-message {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+#blunder-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+#blunder-actions button {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid #6b4a34;
+  background: #2b1f16;
+  color: #f2e9dc;
+  cursor: pointer;
+}
+
+#blunder-back {
+  border-color: #4a6b88;
+  background: #1b2732;
+  color: #cfe4f7;
+}
+
+#blunder-actions button:hover {
+  filter: brightness(1.25);
+}
+
+#menu-panel {
+  width: 190px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#menu-panel label {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+#menu-panel select,
+#menu-panel button,
+#promotion-choices button,
+#play-again {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid #6b4a34;
+  background: #2b1f16;
+  color: #f2e9dc;
+  cursor: pointer;
+}
+
+#menu-panel select:hover,
+#menu-panel button:hover,
+#promotion-choices button:hover,
+#play-again:hover {
+  background: #3a2a1c;
+}
+
+#moves-panel {
+  width: 190px;
+  max-height: min(58vh, 460px);
+  display: flex;
+  flex-direction: column;
+}
+
+#move-list {
+  margin: 0;
+  padding: 10px 10px 10px 34px;
+  list-style-position: outside;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+
+#move-list:empty::after {
+  content: 'No moves yet';
+  display: block;
+  margin-left: -22px;
+  opacity: 0.5;
+  font-size: 0.85rem;
+}
+
+#move-list li {
+  padding: 2px 0;
+}
+
+#move-list li::marker {
+  color: #b89a7f;
+}
+
+#move-list .ply {
+  display: inline-block;
+  min-width: 64px;
+}
+
+#move-list .ply.current {
+  color: #ffd54a;
+  font-weight: 600;
+}
+
+#promotion-picker,
+#game-over {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 7, 5, 0.65);
+  pointer-events: auto;
+}
+
+#promotion-picker.hidden,
+#game-over.hidden,
+#check-banner.hidden {
+  display: none;
+}
+
+#promotion-panel,
+#game-over-panel {
+  background: #2b1f16;
+  border: 1px solid #6b4a34;
+  border-radius: 12px;
+  padding: 24px 32px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+#promotion-panel p {
+  margin: 0 0 14px;
+  font-weight: 600;
+}
+
+#promotion-choices {
+  display: flex;
+  gap: 8px;
+}
+
+#game-over-message {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 18px;
+}
+
+/* ---- 2D flat board: the BBC "Master Game" look ---- */
+/* Sits above the (paused) WebGL canvas but below #ui thanks to DOM order. */
+#board-2d {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: #0b0b11;
+  pointer-events: auto;
+}
+
+.b2d-stage {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 1fr auto;
+  column-gap: clamp(4px, 1.4vw, 9px);
+  row-gap: clamp(2px, 0.8vw, 5px);
+}
+
+.b2d-frame {
+  grid-column: 2;
+  grid-row: 1;
+  width: min(84vw, 72vh, 560px);
+  padding: clamp(5px, 1.6vw, 10px);
+  background: #f4f4f9;
+  border-radius: 3px;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+}
+
+.b2d-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  aspect-ratio: 1;
+  width: 100%;
+}
+
+.b2d-sq {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(18px, 6.5vw, 48px);
+  line-height: 1;
+  user-select: none;
+}
+
+.b2d-sq.light {
+  background: #d7d6f5;
+}
+
+.b2d-sq.dark {
+  background: #8887dd;
+}
+
+.b2d-sq > span {
+  position: relative;
+  z-index: 2;
+}
+
+/* Outline the white pieces with a text-shadow "halo" rather than
+   -webkit-text-stroke, which eats too far into the fill on detailed glyphs. */
+.b2d-sq.white > span {
+  color: #f8f8fc;
+  text-shadow:
+    -1.4px -1.4px 0 #16161d,
+    1.4px -1.4px 0 #16161d,
+    -1.4px 1.4px 0 #16161d,
+    1.4px 1.4px 0 #16161d,
+    0 0 3px rgba(22, 22, 29, 0.9);
+}
+
+.b2d-sq.black > span {
+  color: #14141a;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.28);
+}
+
+/* Last-move trail, selection, check — tinted square backgrounds. */
+.b2d-sq.last::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(246, 201, 92, 0.42);
+}
+
+.b2d-sq.sel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 clamp(2px, 0.7vw, 4px) #f2c14e;
+  background: rgba(246, 201, 92, 0.28);
+}
+
+.b2d-sq.check::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(230, 60, 45, 0.75), rgba(230, 60, 45, 0.1) 70%);
+}
+
+/* Legal-move markers sit above the square tint but below the piece. */
+.b2d-sq.move::after {
+  content: '';
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: rgba(38, 158, 74, 0.85);
+  z-index: 1;
+}
+
+.b2d-sq.capture::after {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: clamp(2px, 0.9vw, 5px) solid rgba(214, 66, 48, 0.9);
+  z-index: 1;
+}
+
+/* Coach hint — a blue ring on the from and to squares; stacks with any tint. */
+.b2d-sq.hint {
+  box-shadow: inset 0 0 0 clamp(2px, 0.8vw, 4px) #5aa9ff;
+}
+
+/* A square the player just tried to move to illegally — a solid red dot
+   where the green "you can go here" dot would be. */
+.b2d-sq.rejected::after {
+  content: '';
+  position: absolute;
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  background: rgba(214, 66, 48, 0.92);
+  z-index: 1;
+}
+
+.b2d-ranks,
+.b2d-files {
+  display: flex;
+  color: #eeeef4;
+  font-weight: 700;
+  font-size: clamp(11px, 2.7vw, 16px);
+}
+
+.b2d-ranks {
+  grid-column: 1;
+  grid-row: 1;
+  flex-direction: column;
+  width: clamp(14px, 3.6vw, 22px);
+  padding: clamp(5px, 1.6vw, 10px) 0; /* match .b2d-frame padding so labels line up with ranks */
+}
+
+.b2d-files {
+  grid-column: 2;
+  grid-row: 2;
+  height: clamp(14px, 3.6vw, 22px);
+  padding: 0 clamp(5px, 1.6vw, 10px);
+}
+
+.b2d-ranks > div,
+.b2d-files > div {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
